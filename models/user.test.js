@@ -12,6 +12,7 @@ const {
   commonBeforeEach,
   commonAfterEach,
   commonAfterAll,
+  testJobIds,
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -132,7 +133,26 @@ describe("findAll", function () {
 /************************************** get */
 
 describe("get", function () {
-  test("works", async function () {
+  test("works for user w application", async function () {
+    let user = await User.get("u2");
+    expect(user).toEqual({
+      username: "u2",
+      firstName: "U2F",
+      lastName: "U2L",
+      email: "u2@email.com",
+      isAdmin: false,
+      jobs:[
+        {
+          id: testJobIds[0],
+          title: "j1",
+          companyHandle: "c1",
+          companyName: "C1",
+        }
+      ]
+    });
+  });
+
+  test("works for user w/o application", async function () {
     let user = await User.get("u1");
     expect(user).toEqual({
       username: "u1",
@@ -140,6 +160,7 @@ describe("get", function () {
       lastName: "U1L",
       email: "u1@email.com",
       isAdmin: false,
+      jobs:[]
     });
   });
 
@@ -222,6 +243,39 @@ describe("remove", function () {
   test("not found if no such user", async function () {
     try {
       await User.remove("nope");
+      fail();
+    } catch (err) {
+      expect(err instanceof NotFoundError).toBeTruthy();
+    }
+  });
+});
+
+/************************************* apply for job */
+
+describe("apply for job", function () {
+  test("works", async function () {
+    await User.apply("u1", testJobIds[0]);
+    const res = await db.query(
+        "SELECT * FROM applications WHERE username='u1'");
+    expect(res.rows.length).toEqual(1);
+    expect(res.rows[0]).toEqual({
+      username: "u1",
+      job_id: testJobIds[0]
+    })
+  });
+
+  test("not found if no such user", async function () {
+    try {
+      await User.apply("none", testJobIds[0]);
+      fail();
+    } catch (err) {
+      expect(err instanceof NotFoundError).toBeTruthy();
+    }
+  });
+
+  test("not found if no such job", async function () {
+    try {
+      await User.apply("u1", 0);
       fail();
     } catch (err) {
       expect(err instanceof NotFoundError).toBeTruthy();

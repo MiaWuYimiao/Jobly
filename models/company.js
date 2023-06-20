@@ -72,17 +72,17 @@ class Company {
 
     if(minEmployees !== undefined) {
       queryValues.push(minEmployees);
-      whereExpression.push('num_employees >= $1');
+      whereExpression.push(`num_employees >= $${queryValues.length}`);
     }
 
     if(maxEmployees !== undefined) {
       queryValues.push(maxEmployees);
-      whereExpression.push('num_employees <= $2');
+      whereExpression.push(`num_employees <= $${queryValues.length}`);
     }
 
     if(name !== undefined) {
       queryValues.push(name);
-      whereExpression.push(" LOWER(name) ILIKE '%' || $3 || '%' ");
+      whereExpression.push(` LOWER(name) ILIKE '%' || $${queryValues.length} || '%' `);
     }
 
     if(whereExpression.length > 0) {
@@ -99,7 +99,7 @@ class Company {
   /** Given a company handle, return data about company.
    *
    * Returns { handle, name, description, numEmployees, logoUrl, jobs }
-   *   where jobs is [{ id, title, salary, equity, companyHandle }, ...]
+   *   where jobs is [{ id, title, salary, equity }, ...]
    *
    * Throws NotFoundError if not found.
    **/
@@ -119,6 +119,16 @@ class Company {
 
     if (!company) throw new NotFoundError(`No company: ${handle}`);
 
+    const jobsRes = await db.query(
+          `SELECT id,
+                  title,
+                  salary,
+                  equity
+           FROM jobs
+           WHERE company_handle = $1`,
+        [handle]);
+    
+    company.jobs = jobsRes.rows;
     return company;
   }
 
